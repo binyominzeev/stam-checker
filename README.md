@@ -1,13 +1,14 @@
 # stam-checker
 
-Minimal offline Torah text anomaly highlighter for handwritten STaM-style images.
+Torah text anomaly highlighter for handwritten STaM-style images.
 
 ## What it does
 
 The tool accepts:
 
 - a phone photo or scan of Torah text (`.jpg` / `.png`)
-- a plain-text Hebrew reference file
+- either a plain-text Hebrew reference file **or** a rough Hebrew snippet used to
+  auto-resolve the reference from [Sefaria](https://www.sefaria.org/)
 
 It produces:
 
@@ -34,9 +35,26 @@ pip install -r requirements.txt
 
 ## CLI
 
+### Manual reference mode (offline)
+
 ```bash
 python -m src.main --image input.jpg --ref text.txt --out output.jpg
 ```
+
+### Sefaria auto-reference mode (requires network access)
+
+Provide a rough Hebrew snippet from the passage being checked; the tool will
+search Sefaria, select the best Torah match, fetch the canonical Hebrew text,
+and use it as the reference for the existing comparison pipeline.
+
+```bash
+python -m src.main --image input.jpg --auto-ref-query "בראשית ברא" --out output.jpg
+```
+
+The resolved Sefaria reference (e.g. `Genesis 1:1`) is printed to standard
+output so you can verify the match.
+
+Exactly one of `--ref` or `--auto-ref-query` must be supplied.
 
 Optional debug output:
 
@@ -72,6 +90,7 @@ Color hints in the annotated image:
 stam-checker/
 ├── src/
 │   ├── main.py
+│   ├── reference.py
 │   ├── preprocess.py
 │   ├── segment.py
 │   ├── match.py

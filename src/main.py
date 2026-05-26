@@ -11,15 +11,28 @@ from src.draw import draw_issues
 from src.match import recognize_characters
 from src.preprocess import load_image, preprocess_image
 from src.segment import detect_lines, segment_characters
-from src.utils import ensure_parent_directory, load_reference_text, save_debug_image
+from src.reference import load_reference_from_file, resolve_reference_from_snippet
+from src.utils import ensure_parent_directory, save_debug_image
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Highlight likely STaM text anomalies on an image.")
     parser.add_argument("--image", required=True, help="Path to the input JPG/PNG image.")
-    parser.add_argument("--ref", required=True, help="Path to the plain-text Hebrew reference file.")
     parser.add_argument("--out", required=True, help="Path to the annotated output image.")
     parser.add_argument("--debug", action="store_true", help="Save intermediate debug images.")
+
+    ref_group = parser.add_mutually_exclusive_group(required=True)
+    ref_group.add_argument("--ref", help="Path to the plain-text Hebrew reference file.")
+    ref_group.add_argument(
+        "--auto-ref-query",
+        dest="auto_ref_query",
+        metavar="SNIPPET",
+        help=(
+            "Rough Hebrew snippet used to auto-resolve the reference via Sefaria "
+            "(requires network access)."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -27,7 +40,12 @@ def main() -> int:
     args = parse_args()
 
     image = load_image(args.image)
-    reference_text = load_reference_text(args.ref)
+
+    if args.ref is not None:
+        reference_text = load_reference_from_file(args.ref)
+    else:
+        ref_name, reference_text = resolve_reference_from_snippet(args.auto_ref_query)
+        print(f"Resolved reference: {ref_name}")
     gray, binary = preprocess_image(image)
     lines = detect_lines(binary)
     boxes, gaps = segment_characters(binary, lines)
