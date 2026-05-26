@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+*.jpg
+*.jpeg
+*.png
+!data/samples/.gitkeep
+!data/reference/.gitkeep
