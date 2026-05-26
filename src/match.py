@@ -42,6 +42,8 @@ def _build_templates(glyphs: list[np.ndarray], reference_text: str) -> dict[str,
     glyph_count = len(glyphs)
 
     for index, glyph in enumerate(glyphs):
+        # Map each observed glyph to a proportional position in the reference text
+        # so repeated reference letters can accumulate a simple average template.
         reference_index = min(reference_length - 1, int(index * reference_length / max(1, glyph_count)))
         grouped[reference_text[reference_index]].append(glyph)
 

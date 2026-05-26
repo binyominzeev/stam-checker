@@ -9,8 +9,9 @@ import cv2
 import numpy as np
 
 from src.compare import compare_sequences, summarize_issues
+from src.draw import _build_text
 from src.segment import GapRegion
-from src.utils import CharacterBox
+from src.utils import CharacterBox, DetectedIssue
 
 
 class CompareTests(unittest.TestCase):
@@ -34,7 +35,19 @@ class CompareTests(unittest.TestCase):
 
 
 class CliSmokeTests(unittest.TestCase):
+    def test_overlay_labels_are_ascii_safe(self) -> None:
+        label = _build_text(
+            DetectedIssue(
+                kind="missing_character",
+                box=CharacterBox(10, 10, 10, 20, 0),
+                label="missing",
+                expected="א",
+            )
+        )
+        self.assertEqual(label, "miss")
+
     def test_cli_writes_annotated_output_and_summary(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             image_path = temp_path / "input.png"
@@ -64,7 +77,7 @@ class CliSmokeTests(unittest.TestCase):
                 check=False,
                 capture_output=True,
                 text=True,
-                cwd="/home/runner/work/stam-checker/stam-checker",
+                cwd=repo_root,
             )
 
             self.assertEqual(result.returncode, 0, msg=result.stderr)

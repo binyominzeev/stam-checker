@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from src.compare import compare_sequences, summarize_issues
 from src.draw import draw_issues
@@ -49,7 +50,7 @@ def main() -> int:
     return 0
 
 
-def _save_debug_outputs(output_path: str, gray, binary) -> None:
+def _save_debug_outputs(output_path: str, gray: np.ndarray, binary: np.ndarray) -> None:
     output = Path(output_path)
     save_debug_image(output.with_name(f"{output.stem}_gray.png"), gray)
     save_debug_image(output.with_name(f"{output.stem}_binary.png"), binary)

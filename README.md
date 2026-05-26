@@ -54,7 +54,7 @@ When `--debug` is provided, intermediate images are saved next to the output fil
 
 Color hints in the annotated image:
 
-- red: likely missing character
+- red: likely missing character without a spacing hint
 - orange: likely extra character
 - blue: suspicious substitution
 - yellow: spacing-driven missing-character suspicion

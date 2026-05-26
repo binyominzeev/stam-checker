@@ -74,7 +74,7 @@ def _detect_gaps(line_boxes: list[CharacterBox]) -> list[GapRegion]:
     if not positive_gaps:
         return []
 
-    median_gap = float(np.median(np.array(positive_gaps)))
+    median_gap = float(np.median(positive_gaps))
     if median_gap <= 0:
         return []
 

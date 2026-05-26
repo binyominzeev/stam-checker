@@ -35,13 +35,14 @@ def compare_sequences(
                     )
                 )
             if a_end - a_start > pair_count:
-                for box in boxes[a_start + pair_count : a_end]:
+                for local_offset, box in enumerate(boxes[a_start + pair_count : a_end]):
+                    recognized_index = a_start + pair_count + local_offset
                     issues.append(
                         DetectedIssue(
                             kind="extra_character",
                             box=box,
                             label="extra",
-                            observed=recognized_text[boxes.index(box)],
+                            observed=recognized_text[recognized_index],
                         )
                     )
             if b_end - b_start > pair_count:
@@ -129,8 +130,10 @@ def estimate_missing_boxes(
     image_shape: tuple[int, int, int] | tuple[int, int],
 ) -> list[CharacterBox]:
     if boxes:
-        median_width = int(np.median([box.w for box in boxes]))
-        median_height = int(np.median([box.h for box in boxes]))
+        widths = [box.w for box in boxes]
+        heights = [box.h for box in boxes]
+        median_width = int(np.median(widths))
+        median_height = int(np.median(heights))
     else:
         median_width = 24
         median_height = 36
@@ -148,12 +151,13 @@ def estimate_missing_boxes(
         step = max(median_width, int(span_width / max(1, count)))
         base_y = min(before_box.y, after_box.y)
         line_index = before_box.line_index
+        placeholder_height = _placeholder_height(median_height, before_box, after_box, height_limit)
         return [
             CharacterBox(
                 x=max(0, min(width_limit - median_width, span_start + offset * step)),
                 y=max(0, min(height_limit - median_height, base_y)),
                 w=min(median_width, width_limit),
-                h=min(max(median_height, before_box.h, after_box.h), height_limit),
+                h=placeholder_height,
                 line_index=line_index,
             )
             for offset in range(count)
@@ -165,12 +169,13 @@ def estimate_missing_boxes(
 
     direction = 1 if before_box else -1
     start_x = anchor.x2 if before_box else max(0, anchor.x - median_width * count)
+    placeholder_height = _placeholder_height(median_height, anchor, None, height_limit)
     return [
         CharacterBox(
             x=max(0, min(width_limit - median_width, start_x + offset * median_width * direction)),
             y=max(0, min(height_limit - median_height, anchor.y)),
             w=min(median_width, width_limit),
-            h=min(max(median_height, anchor.h), height_limit),
+            h=placeholder_height,
             line_index=anchor.line_index,
         )
         for offset in range(count)
@@ -189,3 +194,15 @@ def _spacing_hint_flags(placeholder_boxes: list[CharacterBox], gaps: list[GapReg
             )
         )
     return flags
+
+
+def _placeholder_height(
+    median_height: int,
+    primary_box: CharacterBox,
+    secondary_box: CharacterBox | None,
+    height_limit: int,
+) -> int:
+    heights = [median_height, primary_box.h]
+    if secondary_box is not None:
+        heights.append(secondary_box.h)
+    return min(max(heights), height_limit)

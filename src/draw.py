@@ -40,7 +40,7 @@ def _issue_color(issue: DetectedIssue) -> tuple[int, int, int]:
 
 def _build_text(issue: DetectedIssue) -> str:
     if issue.kind == "substitution_suspicious":
-        return f"sub {issue.observed}->{issue.expected}"
+        return "sub"
     if issue.kind == "extra_character":
-        return f"extra {issue.observed}".strip()
-    return f"miss {issue.expected}".strip()
+        return "extra"
+    return "miss"
