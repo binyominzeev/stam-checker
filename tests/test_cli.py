@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from src.compare import compare_sequences, summarize_issues
+from src.segment import GapRegion
+from src.utils import CharacterBox
+
+
+class CompareTests(unittest.TestCase):
+    def test_compare_sequences_reports_expected_issue_types(self) -> None:
+        boxes = [
+            CharacterBox(10, 10, 10, 20, 0),
+            CharacterBox(30, 10, 10, 20, 0),
+        ]
+        gaps = [GapRegion(CharacterBox(21, 10, 8, 20, 0), 8)]
+
+        substitution_issues = compare_sequences("אב", "אג", boxes, (80, 120, 3), gaps)
+        substitution_summary = summarize_issues(substitution_issues)
+        self.assertEqual(substitution_summary["substitution_suspicious"], 1)
+
+        issues = compare_sequences("אג", "אבג", boxes, (80, 120, 3), gaps)
+        summary = summarize_issues(issues)
+
+        self.assertEqual(summary["missing_character"], 1)
+        self.assertEqual(summary["extra_character"], 0)
+        self.assertTrue(any(issue.spacing_hint for issue in issues if issue.kind == "missing_character"))
+
+
+class CliSmokeTests(unittest.TestCase):
+    def test_cli_writes_annotated_output_and_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            image_path = temp_path / "input.png"
+            reference_path = temp_path / "reference.txt"
+            output_path = temp_path / "annotated.png"
+
+            image = np.full((120, 240, 3), 255, dtype=np.uint8)
+            cv2.rectangle(image, (20, 30), (40, 90), (0, 0, 0), -1)
+            cv2.rectangle(image, (75, 30), (95, 90), (0, 0, 0), -1)
+            cv2.rectangle(image, (130, 30), (150, 90), (0, 0, 0), -1)
+            cv2.imwrite(str(image_path), image)
+            reference_path.write_text("אבגד", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    "python",
+                    "-m",
+                    "src.main",
+                    "--image",
+                    str(image_path),
+                    "--ref",
+                    str(reference_path),
+                    "--out",
+                    str(output_path),
+                    "--debug",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd="/home/runner/work/stam-checker/stam-checker",
+            )
+
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertTrue(output_path.exists())
+            self.assertIn("Suspected errors:", result.stdout)
+            self.assertIn("missing_character:", result.stdout)
+            self.assertTrue((temp_path / "annotated_gray.png").exists())
+            self.assertTrue((temp_path / "annotated_binary.png").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
